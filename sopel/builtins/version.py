@@ -19,17 +19,55 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 GIT_DIR = os.path.join(PROJECT_DIR, '.git')
 
 
-def git_info():
-    head = os.path.join(GIT_DIR, 'HEAD')
+def _read_commit(gitdir: str, head: str) -> str | None:
+    """
+    Given paths to ``.git/`` and ``HEAD``, determine the associated commit hash
+    """
+    result = None
+
     if os.path.isfile(head):
         with open(head) as h:
             head_loc = h.readline()[5:-1]  # strip ref: and \n
-        head_file = os.path.join(GIT_DIR, head_loc)
+        head_file = os.path.join(gitdir, head_loc)
         if os.path.isfile(head_file):
             with open(head_file) as h:
                 sha = h.readline()
                 if sha:
-                    return sha
+                    result = sha
+
+    return result
+
+
+def _resolve_git_dirs(pth: str) -> tuple[str, str]:
+    """
+    Resolve a ``.git`` path to its 'true' ``.git/`` and `HEAD`
+
+    This helper is useful for dealing with the ``.git`` file stored in a
+    git worktree.
+    """
+    # default to the old behavior: assume `pth` is a valid .git/ to begin with
+    gitdir = pth
+    head = os.path.join(pth, "HEAD")
+
+    if os.path.isfile(pth):
+        # this may be a worktree, let's override the result properly if so
+        with open(pth, 'r') as f:
+            first, rest = next(f).strip().split(maxsplit=1)
+            if first == "gitdir:":
+                # line is "gitdir: /path/to/parentrepo/.git/worktrees/thispath"
+                gitdir = os.path.dirname(os.path.dirname(rest))
+                head = os.path.join(rest, "HEAD")
+            # else: we can't make sense of this file, stick to the default
+
+    return gitdir, head
+
+
+def git_info() -> str | None:
+    """
+    Determine the git commit hash of this Sopel, if applicable
+    """
+    gitdir, head = _resolve_git_dirs(GIT_DIR)
+    return _read_commit(gitdir, head)
 
 
 @plugin.command('version')
