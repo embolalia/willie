@@ -24,8 +24,10 @@ GIT_DIR = os.path.join(PROJECT_DIR, '.git')
 
 
 def _read_commit(gitdir: str, head: str) -> str | None:
-    """
-    Given paths to ``.git/`` and ``HEAD``, determine the associated commit hash
+    """Given paths to ``.git/`` and ``HEAD``, determine the associated commit hash
+
+    :param gitdir: path to a ``.git/`` directory
+    :param head: path to ``HEAD`` file
     """
     result = None
 
@@ -47,6 +49,8 @@ def _resolve_git_dirs(path: str) -> tuple[str, str]:
 
     This helper is useful for dealing with the ``.git`` file stored in a
     git worktree.
+
+    :param path: path to a .git directory or worktree reference file
     """
     # default to the old behavior: assume `path` is a valid .git/ to begin with
     gitdir = path
