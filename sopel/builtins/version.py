@@ -38,20 +38,18 @@ def _read_commit(gitdir: str, head: str) -> str | None:
     return result
 
 
-def _resolve_git_dirs(pth: str) -> tuple[str, str]:
-    """
-    Resolve a ``.git`` path to its 'true' ``.git/`` and `HEAD`
+def _resolve_git_dirs(path: str) -> tuple[str, str]:
 
     This helper is useful for dealing with the ``.git`` file stored in a
     git worktree.
     """
-    # default to the old behavior: assume `pth` is a valid .git/ to begin with
-    gitdir = pth
-    head = os.path.join(pth, "HEAD")
+    # default to the old behavior: assume `path` is a valid .git/ to begin with
+    gitdir = path
+    head = os.path.join(path, "HEAD")
 
-    if os.path.isfile(pth):
+    if os.path.isfile(path):
         # this may be a worktree, let's override the result properly if so
-        with open(pth, 'r') as f:
+        with open(path, 'r') as f:
             first, rest = next(f).strip().split(maxsplit=1)
             if first == "gitdir:":
                 # line is "gitdir: /path/to/parentrepo/.git/worktrees/thispath"
