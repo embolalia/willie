@@ -39,6 +39,7 @@ def _read_commit(gitdir: str, head: str) -> str | None:
 
 
 def _resolve_git_dirs(path: str) -> tuple[str, str]:
+    """Resolve a ``.git`` path to its 'true' ``.git/`` and `HEAD`
 
     This helper is useful for dealing with the ``.git`` file stored in a
     git worktree.
