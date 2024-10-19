@@ -9,10 +9,14 @@ https://sopel.chat
 from __future__ import annotations
 
 import datetime
+import logging
 import os
 import platform
 
 from sopel import __version__ as release, plugin
+
+
+logger = logging.getLogger(__name__)
 
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -102,7 +106,12 @@ def version(bot, trigger):
         'Sopel v%s' % release,
         'Python: %s' % platform.python_version()
     ]
-    sha = git_info()
+    try:
+        sha = git_info()
+    except OSError:
+        logger.warning("Failed to retrieve git commit hash", exc_info=True)
+        sha = None
+
     if sha:
         parts.append('Commit: %s' % sha)
 
