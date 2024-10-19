@@ -39,7 +39,9 @@ from sopel.trigger import Trigger
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from sopel.plugins.handlers import AbstractPluginHandler
+    from sopel.plugins.handlers import (
+        AbstractPluginHandler, PluginMetaDescription,
+    )
     from sopel.trigger import PreTrigger
 
 
@@ -342,6 +344,37 @@ class Sopel(irc.AbstractBot):
 
     # plugins management
 
+    def store_plugin_handler(
+        self,
+        handler: AbstractPluginHandler,
+    ) -> None:
+        """Record a plugin ``handler``.
+
+        :param handler: the plugin handler to record
+
+        Recording a plugin handler associates only its name to :attr:`plugins`.
+        To register a plugin handler's callables, jobs, etc., you should use
+        its :meth:`~sopel.plugins.handlers.AbstractPluginHandler.register`
+        method.
+
+        .. versionadded:: 8.1
+        """
+        self._plugins[handler.name] = handler
+
+    def remove_plugin_handler(self, name: str) -> None:
+        """Remove a plugin handler from ``name``.
+
+        :param name: plugin name to forget
+
+        Removing a plugin handler removes only its name from :attr:``plugins``.
+        To unregister a plugin handler's callables, jobs, etc. you should use
+        its :meth:`~sopel.plugins.handlers.AbstractPluginHandler.unregister`
+        method.
+
+        .. versionadded:: 8.1
+        """
+        del self._plugins[name]
+
     def reload_plugin(self, name: str) -> None:
         """Reload a plugin.
 
@@ -357,10 +390,12 @@ class Sopel(irc.AbstractBot):
             raise plugins.exceptions.PluginNotRegistered(name)
 
         plugin_handler = self._plugins[name]
+
         # tear down
         plugin_handler.shutdown(self)
         plugin_handler.unregister(self)
         LOGGER.info("Unloaded plugin %s", name)
+
         # reload & setup
         plugin_handler.reload()
         plugin_handler.setup(self)
@@ -392,8 +427,13 @@ class Sopel(irc.AbstractBot):
             LOGGER.info("Reloaded %s plugin %s from %s",
                         meta['type'], name, meta['source'])
 
-    # TODO: deprecate both add_plugin and remove_plugin; see #2425
+    # TODO: Remove in Sopel 9.0
 
+    @deprecated(
+        'Use direct access to add rules, jobs, etc.',
+        version='8.1',
+        removed_in='9.0',
+    )
     def add_plugin(
         self,
         plugin: AbstractPluginHandler,
@@ -412,6 +452,12 @@ class Sopel(irc.AbstractBot):
                           should be called on shutdown
         :param urls: an iterable of functions from the ``plugin`` to call when
                      matched against a URL
+
+        .. deprecated:: 8.1
+
+            This method is deprecated and replaced by direct call to register
+            methods. It will be removed in Sopel 9.0.
+
         """
         self._plugins[plugin.name] = plugin
         self.register_callables(callables)
@@ -419,6 +465,11 @@ class Sopel(irc.AbstractBot):
         self.register_shutdowns(shutdowns)
         self.register_urls(urls)
 
+    @deprecated(
+        'Use direct access to remove rules, jobs, etc.',
+        version='8.1',
+        removed_in='9.0',
+    )
     def remove_plugin(
         self,
         plugin: AbstractPluginHandler,
@@ -437,6 +488,12 @@ class Sopel(irc.AbstractBot):
                           should be called on shutdown
         :param urls: an iterable of functions from the ``plugin`` to call when
                      matched against a URL
+
+        .. deprecated:: 8.1
+
+            This method is deprecated and replaced by direct call to unregister
+            methods. It will be removed in Sopel 9.0.
+
         """
         name = plugin.name
         if not self.has_plugin(name):
@@ -459,7 +516,7 @@ class Sopel(irc.AbstractBot):
         """
         return name in self._plugins
 
-    def get_plugin_meta(self, name: str) -> dict:
+    def get_plugin_meta(self, name: str) -> PluginMetaDescription:
         """Get info about a registered plugin by its name.
 
         :param str name: name of the plugin about which to get info
@@ -569,7 +626,7 @@ class Sopel(irc.AbstractBot):
         # call on shutdown
         self.shutdown_methods = self.shutdown_methods + list(shutdowns)
 
-    def unregister_shutdowns(self, shutdowns: Iterable) -> None:
+    def unregister_shutdowns(self, shutdowns: Iterable[Callable]) -> None:
         self.shutdown_methods = [
             shutdown
             for shutdown in self.shutdown_methods
