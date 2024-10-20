@@ -70,8 +70,7 @@ def _resolve_git_dirs(path: str) -> tuple[str, str]:
 
 
 def git_info() -> str | None:
-    """
-    Determine the git commit hash of this Sopel, if applicable
+    """Determine the git commit hash of this Sopel, if applicable
     """
     gitdir, head = _resolve_git_dirs(GIT_DIR)
     return _read_commit(gitdir, head)
