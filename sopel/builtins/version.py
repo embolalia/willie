@@ -18,7 +18,6 @@ from sopel import __version__ as release, plugin
 
 logger = logging.getLogger(__name__)
 
-
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 GIT_DIR = os.path.join(PROJECT_DIR, '.git')
 
@@ -69,7 +68,7 @@ def _resolve_git_dirs(path: str) -> tuple[str, str]:
     return gitdir, head
 
 
-def git_info() -> str | None:
+def sopel_git_commit() -> str | None:
     """Determine the git commit hash of this Sopel, if applicable
     """
     gitdir, head = _resolve_git_dirs(GIT_DIR)
@@ -110,7 +109,7 @@ def version(bot, trigger):
         'Python: %s' % platform.python_version()
     ]
     try:
-        sha = git_info()
+        sha = sopel_git_commit()
     except OSError:
         logger.warning("Failed to retrieve git commit hash", exc_info=True)
         sha = None
