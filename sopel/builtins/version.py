@@ -36,7 +36,7 @@ def _read_commit(gitdir: str, head: str) -> str | None:
         head_file = os.path.join(gitdir, head_loc)
         if os.path.isfile(head_file):
             with open(head_file) as h:
-                sha = h.readline()
+                sha = h.readline().strip()
                 if sha:
                     result = sha
 
