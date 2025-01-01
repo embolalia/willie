@@ -20,6 +20,9 @@ sphinx-rfcsection~=0.1.1
 # use fork of vcrpy 5.x until kevin1024/vcrpy#777 is (hopefully) accepted
 # (or until py3.9 EOL... in 10/2025, I HOPE NOT)
 vcrpy @ git+https://github.com/sopel-irc/vcrpy@uncap-urllib3
+# also have to use a version of urllib3 that doesn't use the `version_string`
+# attr of the response object, because vcrpy won't support it until 7.x
+urllib3<2.3
 # type check
 # often breaks CI on master, so pin and update deliberately, on our own terms
 mypy==1.11.2
