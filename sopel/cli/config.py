@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 
 from . import utils
 
@@ -49,6 +50,13 @@ def build_parser():
         help='Initialize Sopel configuration file',
         description='Initialize Sopel configuration file')
     utils.add_common_arguments(init_parser)
+
+    # sopel-config edit
+    edit_parser = subparsers.add_parser(
+        'edit',
+        help='Open Sopel configuration file in your default text editor',
+        description='Open Sopel configuration file in your default text editor')
+    utils.add_common_arguments(edit_parser)
 
     # sopel-config get <section> <key>
     get_parser = subparsers.add_parser(
@@ -150,6 +158,29 @@ def handle_init(options):
     return 0  # successful operation
 
 
+def handle_edit(options):
+    """Open the specified config file in the user's ``$EDITOR``.
+
+    :param options: parsed arguments
+    :type options: :class:`argparse.Namespace`
+    :return: 0 if everything went fine;
+             1 if the specified config file doesn't exist;
+             2 if the user doesn't have a valid ``$EDITOR``
+    """
+    editor = os.environ.get('EDITOR', None)
+    if editor is None:
+        print('No $EDITOR found. Please configure your shell.')
+        return 2
+
+    config_filename = utils.find_config(options.configdir, options.config)
+    if not os.path.isfile(config_filename):
+        print('No config file found at {}'.format(config_filename))
+        return 1
+
+    subprocess.Popen([editor, config_filename])
+    return 0  # successful operation
+
+
 def handle_get(options):
     """Read the settings to display the value of ``<section> <key>``.
 
@@ -198,6 +229,8 @@ def main():
             return handle_list(options)
         elif action == 'init':
             return handle_init(options)
+        elif action == 'edit':
+            return handle_edit(options)
         elif action == 'get':
             return handle_get(options)
     except KeyboardInterrupt:
