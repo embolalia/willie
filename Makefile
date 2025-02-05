@@ -43,7 +43,17 @@ clean_docs:
 build_docs:
 	$(MAKE) -C docs html
 
+.ONESHELL:
+build_docs_preview:
+ifneq "$(shell git status --untracked-files=no --porcelain)" ""
+	@export SOPEL_GIT_DIRTY=1
+endif
+	@export SOPEL_GIT_COMMIT="$$(git rev-parse HEAD)"
+	$(MAKE) build_docs
+
 docs: build_docs
+
+docs_preview: build_docs_preview
 
 cleandoc: clean_docs build_docs
 
