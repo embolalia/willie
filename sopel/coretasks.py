@@ -147,6 +147,7 @@ def _handle_sasl_capability(
 CAP_ECHO_MESSAGE = plugin.capability('echo-message')
 CAP_MULTI_PREFIX = plugin.capability('multi-prefix')
 CAP_AWAY_NOTIFY = plugin.capability('away-notify')
+CAP_INVITE_NOTIFY = plugin.capability('invite-notify')
 CAP_CHGHOST = plugin.capability('chghost')
 CAP_CAP_NOTIFY = plugin.capability('cap-notify')
 CAP_SERVER_TIME = plugin.capability('server-time')
@@ -939,6 +940,16 @@ def _periodic_send_who(bot):
         # selected_channel's last who is either none or the oldest valid
         LOGGER.debug("Sending WHO for channel: %s", selected_channel)
         _send_who(bot, selected_channel)
+
+
+@plugin.event('INVITE')
+@plugin.thread(False)
+@plugin.unblockable
+@plugin.priority('medium')
+def track_invite(bot, trigger):
+    """Track users being invited to channels."""
+    LOGGER.info(
+        '%s invited %s to %s', trigger.nick, trigger.args[0], trigger.args[1])
 
 
 @plugin.event('JOIN')

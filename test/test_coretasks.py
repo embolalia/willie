@@ -578,6 +578,15 @@ def test_recv_chghost_invalid(mockbot, ircfactory, caplog):
     assert 'insufficient arguments' in caplog.messages[2]
 
 
+def test_track_invite(mockbot, caplog):
+    """Verify handling of INVITE event (when invite-notify CAP is available)"""
+    caplog.set_level(logging.INFO)
+    mockbot.on_message(":Henry!king@monar.ch INVITE Anne #boudoir")
+
+    assert len(caplog.messages) == 1
+    assert caplog.messages[0] == 'Henry invited Anne to #boudoir'
+
+
 def test_join_time(mockbot):
     """Make sure channel.join_time is set from JOIN echo time tag"""
     mockbot.on_message(

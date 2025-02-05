@@ -291,7 +291,13 @@ def me(bot, trigger):
 @plugin.priority('low')
 def invite_join(bot, trigger):
     """Join a channel Sopel is invited to, if the inviter is an admin."""
+    nick = trigger.args[0]
     channel = trigger.args[1]
+
+    if nick != bot.nick:
+        # this handler only cares if the invitee was the bot
+        return
+
     if trigger.admin:
         LOGGER.info(
             'Got invited to "%s" by an admin.', channel)
