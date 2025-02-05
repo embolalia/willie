@@ -225,8 +225,8 @@ def quit(bot, trigger):
     bot.quit(quit_message)
 
 
-@plugin.require_privmsg
 @plugin.require_owner
+@plugin.require_privmsg('This command only works as a private message.')
 @plugin.command('raw')
 @plugin.priority('low')
 @plugin.example('.raw PRIVMSG NickServ :CERT ADD')
@@ -242,8 +242,8 @@ def raw(bot, trigger):
     bot.write([trigger.group(2)])
 
 
-@plugin.require_privmsg
 @plugin.require_admin
+@plugin.require_privmsg('This command only works as a private message.')
 @plugin.command('say', 'msg')
 @plugin.priority('low')
 @plugin.example('.say #YourPants Does anyone else smell neurotoxin?')
@@ -265,8 +265,8 @@ def say(bot, trigger):
     bot.say(message, channel)
 
 
-@plugin.require_privmsg
 @plugin.require_admin
+@plugin.require_privmsg('This command only works as a private message.')
 @plugin.command('me')
 @plugin.priority('low')
 def me(bot, trigger):
