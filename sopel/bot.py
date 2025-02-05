@@ -1267,6 +1267,10 @@ class Sopel(irc.AbstractBot):
         .. __: https://docs.python.org/3.11/library/re.html#match-objects
 
         """
+        return self._search_url_callbacks_impl(url)
+
+    def _search_url_callbacks_impl(self, url):
+        # actual implementation, usable internally without warnings
         for regex, function in self._url_callbacks.items():
             match = regex.search(url)
             if match:

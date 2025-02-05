@@ -1608,6 +1608,8 @@ def track_topic(bot, trigger):
     LOGGER.info("Channel's topic updated: %s", channel)
 
 
+# TODO: This needs to go away with the rest of the obsolete manually-registered-
+# URL-callback system in Sopel 9.0
 @plugin.rule(r'(?u).*(.+://\S+).*')
 def handle_url_callbacks(bot, trigger):
     """Dispatch callbacks on URLs
@@ -1618,7 +1620,7 @@ def handle_url_callbacks(bot, trigger):
     # find URLs in the trigger
     for url in trigger.urls:
         # find callbacks for said URL
-        for function, match in bot.search_url_callbacks(url):
+        for function, match in bot._search_url_callbacks_impl(url):
             # trigger callback defined by the `@url` decorator
             if hasattr(function, 'url_regex'):
                 # bake the `match` argument in before passing the callback on
