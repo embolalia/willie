@@ -51,15 +51,19 @@ import itertools
 import logging
 import os
 import sys
-from typing import Optional, TYPE_CHECKING, TypedDict
+from typing import ClassVar, TYPE_CHECKING, TypedDict
 
 from sopel import __version__ as release, loader, plugin as plugin_decorators
 from . import exceptions
 
 
 if TYPE_CHECKING:
-    from sopel.bot import Sopel
     from types import ModuleType
+
+    from importlib_metadata import EntryPoint
+
+    from sopel.bot import Sopel
+    from sopel.config import Config
 
 
 LOGGER = logging.getLogger(__name__)
@@ -82,7 +86,7 @@ class PluginMetaDescription(TypedDict):
     label: str
     type: str
     source: str
-    version: Optional[str]
+    version: str | None
 
 
 class AbstractPluginHandler(abc.ABC):
@@ -109,7 +113,7 @@ class AbstractPluginHandler(abc.ABC):
     """
 
     @abc.abstractmethod
-    def load(self):
+    def load(self) -> None:
         """Load the plugin.
 
         This method must be called first, in order to setup, register, shutdown,
@@ -117,7 +121,7 @@ class AbstractPluginHandler(abc.ABC):
         """
 
     @abc.abstractmethod
-    def reload(self):
+    def reload(self) -> None:
         """Reload the plugin.
 
         This method can be called once the plugin is already loaded. It will
@@ -129,7 +133,6 @@ class AbstractPluginHandler(abc.ABC):
         """Retrieve a display label for the plugin.
 
         :return: a human readable label for display purpose
-        :rtype: str
 
         This method should, at least, return ``<module_name> plugin``.
         """
@@ -139,17 +142,15 @@ class AbstractPluginHandler(abc.ABC):
         """Retrieve a meta description for the plugin.
 
         :return: Metadata about the plugin
-        :rtype: :class:`dict`
 
         The expected keys are detailed in :class:`PluginMetaDescription`.
         """
 
     @abc.abstractmethod
-    def get_version(self):
+    def get_version(self) -> str | None:
         """Retrieve the plugin's version.
 
         :return: the plugin's version string
-        :rtype: str
         """
         raise NotImplementedError
 
@@ -158,18 +159,16 @@ class AbstractPluginHandler(abc.ABC):
         """Tell if the plugin is loaded or not.
 
         :return: ``True`` if the plugin is loaded, ``False`` otherwise
-        :rtype: bool
 
         This must return ``True`` if the :meth:`load` method has been called
         with success.
         """
 
     @abc.abstractmethod
-    def setup(self, bot):
+    def setup(self, bot: Sopel) -> None:
         """Run the plugin's setup action.
 
         :param bot: instance of Sopel
-        :type bot: :class:`sopel.bot.Sopel`
         """
 
     @abc.abstractmethod
@@ -177,7 +176,6 @@ class AbstractPluginHandler(abc.ABC):
         """Tell if the plugin has a setup action.
 
         :return: ``True`` if the plugin has a setup, ``False`` otherwise
-        :rtype: bool
         """
 
     @abc.abstractmethod
@@ -185,27 +183,24 @@ class AbstractPluginHandler(abc.ABC):
         """Retrieve the plugin's list of capability requests."""
 
     @abc.abstractmethod
-    def register(self, bot):
+    def register(self, bot: Sopel) -> None:
         """Register the plugin with the ``bot``.
 
         :param bot: instance of Sopel
-        :type bot: :class:`sopel.bot.Sopel`
         """
 
     @abc.abstractmethod
-    def unregister(self, bot):
+    def unregister(self, bot: Sopel) -> None:
         """Unregister the plugin from the ``bot``.
 
         :param bot: instance of Sopel
-        :type bot: :class:`sopel.bot.Sopel`
         """
 
     @abc.abstractmethod
-    def shutdown(self, bot):
+    def shutdown(self, bot: Sopel) -> None:
         """Run the plugin's shutdown action.
 
         :param bot: instance of Sopel
-        :type bot: :class:`sopel.bot.Sopel`
         """
 
     @abc.abstractmethod
@@ -214,15 +209,13 @@ class AbstractPluginHandler(abc.ABC):
 
         :return: ``True`` if the plugin has a ``shutdown`` action, ``False``
                  otherwise
-        :rtype: bool
         """
 
     @abc.abstractmethod
-    def configure(self, settings):
+    def configure(self, settings: Config) -> None:
         """Configure Sopel's ``settings`` for this plugin.
 
         :param settings: Sopel's configuration
-        :type settings: :class:`sopel.config.Config`
 
         This method will be called by Sopel's configuration wizard.
         """
@@ -233,7 +226,6 @@ class AbstractPluginHandler(abc.ABC):
 
         :return: ``True`` if the plugin has a ``configure`` action, ``False``
                  otherwise
-        :rtype: bool
         """
 
 
@@ -263,34 +255,40 @@ class PyModulePlugin(AbstractPluginHandler):
 
     """
 
-    PLUGIN_TYPE = 'python-module'
+    PLUGIN_TYPE: ClassVar[str] = 'python-module'
     """The plugin's type.
 
     Metadata for the plugin; this should be considered to be a constant and
     should not be modified at runtime.
     """
 
-    def __init__(self, name, package=None):
+    package: str | None
+    """Dotted path of the plugin's python module's package."""
+
+    module_name: str
+    """Name of the python module for this plugin."""
+
+    def __init__(self, name: str, package: str | None = None) -> None:
         self.name = name
         self.package = package
         if package:
-            self.module_name = self.package + '.' + self.name
+            self.module_name = package + '.' + self.name
         else:
             self.module_name = name
 
-        self._module = None
+        self._module: ModuleType | None = None
 
     @property
     def module(self) -> ModuleType:
+        """Python module represented by this plugin."""
         if self._module is None:
             raise RuntimeError('No module for plugin %s' % self.name)
         return self._module
 
-    def get_label(self):
+    def get_label(self) -> str:
         """Retrieve a display label for the plugin.
 
         :return: a human readable label for display purpose
-        :rtype: str
 
         By default, this is ``<name> plugin``. If the plugin's module has a
         docstring, its first line is used as the plugin's label.
@@ -332,13 +330,12 @@ class PyModulePlugin(AbstractPluginHandler):
             'version': self.get_version(),
         }
 
-    def get_version(self) -> Optional[str]:
+    def get_version(self) -> str | None:
         """Retrieve the plugin's version.
 
         :return: the plugin's version string
-        :rtype: Optional[str]
         """
-        version: Optional[str] = None
+        version: str | None = None
         if self.is_loaded() and hasattr(self.module, "__version__"):
             version = str(self.module.__version__)
         elif self.module_name.startswith("sopel."):
@@ -346,28 +343,28 @@ class PyModulePlugin(AbstractPluginHandler):
 
         return version
 
-    def load(self):
+    def load(self) -> None:
         """Load the plugin's module using :func:`importlib.import_module`.
 
         This method assumes the module is available through ``sys.path``.
         """
         self._module = importlib.import_module(self.module_name)
 
-    def reload(self):
+    def reload(self) -> None:
         """Reload the plugin's module using :func:`importlib.reload`.
 
         This method assumes the plugin is already loaded.
         """
         self._module = importlib.reload(self.module)
 
-    def is_loaded(self):
+    def is_loaded(self) -> bool:
         return self._module is not None
 
-    def setup(self, bot):
+    def setup(self, bot: Sopel) -> None:
         if self.has_setup():
             self.module.setup(bot)
 
-    def has_setup(self):
+    def has_setup(self) -> bool:
         """Tell if the plugin has a setup action.
 
         :return: ``True`` if the plugin has a setup, ``False`` otherwise
@@ -391,24 +388,36 @@ class PyModulePlugin(AbstractPluginHandler):
             bot.cap_requests.register(self.name, cap_request)
 
         # plugin callables go through ``bot.add_plugin``
-        relevant_parts = loader.clean_module(self.module, bot.config)
-        for part in itertools.chain(*relevant_parts):
+        callables, jobs, _, urls = loader.clean_module(
+            self.module,
+            bot.config,
+        )
+
+        for part in itertools.chain(callables, jobs, urls):
             # annotate all callables in relevant_parts with `plugin_name`
             # attribute to make per-channel config work; see #1839
             setattr(part, 'plugin_name', self.name)
 
-        # TODO: replace add_plugin to direct call to register_* methods
-        bot.add_plugin(self, *relevant_parts)
+        bot.register_callables(callables)
+        bot.register_jobs(jobs)
+        if self.has_shutdown():
+            bot.register_shutdowns([self.module.shutdown])
+        bot.register_urls(urls)
+        bot.store_plugin_handler(self)
 
-    def unregister(self, bot):
-        relevant_parts = loader.clean_module(self.module, bot.config)
-        bot.remove_plugin(self, *relevant_parts)
+    def unregister(self, bot: Sopel) -> None:
+        name = self.name
+        bot.rules.unregister_plugin(name)
+        bot.scheduler.unregister_plugin(name)
+        if self.has_shutdown():
+            bot.unregister_shutdowns([self.module.shutdown])
+        bot.remove_plugin_handler(name)
 
-    def shutdown(self, bot):
+    def shutdown(self, bot: Sopel) -> None:
         if self.has_shutdown():
             self.module.shutdown(bot)
 
-    def has_shutdown(self):
+    def has_shutdown(self) -> bool:
         """Tell if the plugin has a shutdown action.
 
         :return: ``True`` if the plugin has a ``shutdown`` action, ``False``
@@ -420,11 +429,11 @@ class PyModulePlugin(AbstractPluginHandler):
         """
         return hasattr(self.module, 'shutdown')
 
-    def configure(self, settings):
+    def configure(self, settings: Config) -> None:
         if self.has_configure():
             self.module.configure(settings)
 
-    def has_configure(self):
+    def has_configure(self) -> bool:
         """Tell if the plugin has a configure action.
 
         :return: ``True`` if the plugin has a ``configure`` action, ``False``
@@ -454,14 +463,14 @@ class PyFilePlugin(PyModulePlugin):
     not being in the Python path.
     """
 
-    PLUGIN_TYPE = 'python-file'
+    PLUGIN_TYPE: ClassVar[str] = 'python-file'
     """The plugin's type.
 
     Metadata for the plugin; this should be considered to be a constant and
     should not be modified at runtime.
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename: str):
         good_file = (
             os.path.isfile(filename) and
             filename.endswith('.py') and not filename.startswith('_')
@@ -496,7 +505,7 @@ class PyFilePlugin(PyModulePlugin):
 
         super().__init__(name)
 
-    def _load(self):
+    def _load(self) -> ModuleType:
         module = importlib.util.module_from_spec(self.module_spec)
         if not self.module_spec.loader:
             raise exceptions.PluginError('Could not determine loader for plugin: %s' % self.filename)
@@ -530,10 +539,10 @@ class PyFilePlugin(PyModulePlugin):
         })
         return data
 
-    def load(self):
+    def load(self) -> None:
         self._module = self._load()
 
-    def reload(self):
+    def reload(self) -> None:
         """Reload the plugin.
 
         Unlike :class:`PyModulePlugin`, it is not possible to use the
@@ -600,27 +609,26 @@ class EntryPointPlugin(PyModulePlugin):
 
     """
 
-    PLUGIN_TYPE = 'setup-entrypoint'
+    PLUGIN_TYPE: ClassVar[str] = 'setup-entrypoint'
     """The plugin's type.
 
     Metadata for the plugin; this should be considered to be a constant and
     should not be modified at runtime.
     """
 
-    def __init__(self, entry_point):
-        self.entry_point = entry_point
+    def __init__(self, entry_point: EntryPoint):
+        self.entry_point: EntryPoint = entry_point
         super().__init__(entry_point.name)
 
-    def load(self):
+    def load(self) -> None:
         self._module = self.entry_point.load()
 
-    def get_version(self) -> Optional[str]:
+    def get_version(self) -> str | None:
         """Retrieve the plugin's version.
 
         :return: the plugin's version string
-        :rtype: Optional[str]
         """
-        version: Optional[str] = super().get_version()
+        version: str | None = super().get_version()
 
         if (
             version is None
