@@ -1,5 +1,5 @@
 # These are requirements to develop Sopel itself.
-coveralls>=2.0
+coverage~=7.0
 flake8>=5
 flake8-coding
 flake8-future-import

@@ -1,6 +1,7 @@
 # Sample conf file from http://nedbatchelder.com/code/coverage/config.html
 [run]
-source = sopel
+include =
+    sopel/*
 branch = True
 omit =
     sopel/web.py

@@ -42,12 +42,16 @@ jobs:
         run: make lint
       - name: Run pytest
         run: make test_norecord
+      - name: Generate XML coverage report
+        # Coveralls reporter doesn't understand branch coverage in .coverage DB
+        # and conversion to LCOV doesn't work right either
+        run: coverage xml
       - name: Upload coverage data to coveralls.io
-        run: coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
-          COVERALLS_PARALLEL: true
+        uses: coverallsapp/github-action@v2
+        with:
+          flag-name: ${{ matrix.python-version }}
+          parallel: true
+          file: coverage.xml
 
   coveralls:
     if: ${{ github.repository_owner == 'sopel-irc' }}
@@ -56,11 +60,9 @@ jobs:
     name: Finalize job on coveralls.io
     needs: tests
     runs-on: ubuntu-latest
-    container: python:3-slim
     steps:
     - name: Notify coveralls.io
-      run: |
-        pip install --upgrade coveralls
-        coveralls --finish
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel-finished: true
+        carryforward: all
