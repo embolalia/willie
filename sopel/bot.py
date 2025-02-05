@@ -601,7 +601,9 @@ class Sopel(irc.AbstractBot):
         rule: AbstractRuleType,
         trigger: Trigger,
     ) -> tuple[bool, Optional[str]]:
-        if trigger.admin or rule.is_unblockable():
+        if rule.is_unblockable():
+            return False, None
+        if trigger.admin and not rule.is_admin_rate_limited():
             return False, None
 
         nick = trigger.nick

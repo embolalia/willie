@@ -819,6 +819,16 @@ def test_rule_unblockable():
     assert rule.is_unblockable()
 
 
+def test_rule_rate_limit_admins():
+    regex = re.compile('.*')
+
+    rule = rules.Rule([regex])
+    assert not rule.is_admin_rate_limited()
+
+    rule = rules.Rule([regex], rate_limit_admins=True)
+    assert rule.is_admin_rate_limited()
+
+
 def test_rule_parse_wildcard():
     # match everything
     regex = re.compile(r'.*')
@@ -1109,6 +1119,7 @@ def test_kwargs_from_callable(mockbot):
     assert 'threaded' in kwargs
     assert 'output_prefix' in kwargs
     assert 'unblockable' in kwargs
+    assert 'rate_limit_admins' in kwargs
     assert 'user_rate_limit' in kwargs
     assert 'channel_rate_limit' in kwargs
     assert 'global_rate_limit' in kwargs
@@ -1129,6 +1140,7 @@ def test_kwargs_from_callable(mockbot):
     assert kwargs['threaded'] is True
     assert kwargs['output_prefix'] == ''
     assert kwargs['unblockable'] is False
+    assert kwargs['rate_limit_admins'] is False
     assert kwargs['user_rate_limit'] == 0
     assert kwargs['channel_rate_limit'] == 0
     assert kwargs['global_rate_limit'] == 0
@@ -1249,7 +1261,9 @@ def test_kwargs_from_callable_unblockable(mockbot):
 def test_kwargs_from_callable_rate_limit(mockbot):
     # prepare callable
     @plugin.rule(r'hello', r'hi', r'hey', r'hello|hi')
-    @plugin.rate(user=20, channel=30, server=40, message='Default message.')
+    @plugin.rate(
+        user=20, channel=30, server=40, message='Default message.',
+        include_admins=True)
     def handler(wrapped, trigger):
         wrapped.reply('Hi!')
 
@@ -1257,6 +1271,7 @@ def test_kwargs_from_callable_rate_limit(mockbot):
 
     # get kwargs
     kwargs = rules.Rule.kwargs_from_callable(handler)
+    assert 'rate_limit_admins' in kwargs
     assert 'user_rate_limit' in kwargs
     assert 'channel_rate_limit' in kwargs
     assert 'global_rate_limit' in kwargs
@@ -1264,6 +1279,7 @@ def test_kwargs_from_callable_rate_limit(mockbot):
     assert 'channel_rate_message' in kwargs
     assert 'global_rate_message' in kwargs
     assert 'default_rate_message' in kwargs
+    assert kwargs['rate_limit_admins'] is True
     assert kwargs['user_rate_limit'] == 20
     assert kwargs['channel_rate_limit'] == 30
     assert kwargs['global_rate_limit'] == 40
@@ -1276,7 +1292,7 @@ def test_kwargs_from_callable_rate_limit(mockbot):
 def test_kwargs_from_callable_rate_limit_user(mockbot):
     # prepare callable
     @plugin.rule(r'hello', r'hi', r'hey', r'hello|hi')
-    @plugin.rate_user(20, 'User message.')
+    @plugin.rate_user(20, 'User message.', True)
     def handler(wrapped, trigger):
         wrapped.reply('Hi!')
 
@@ -1284,6 +1300,7 @@ def test_kwargs_from_callable_rate_limit_user(mockbot):
 
     # get kwargs
     kwargs = rules.Rule.kwargs_from_callable(handler)
+    assert 'rate_limit_admins' in kwargs
     assert 'user_rate_limit' in kwargs
     assert 'channel_rate_limit' in kwargs
     assert 'global_rate_limit' in kwargs
@@ -1291,6 +1308,7 @@ def test_kwargs_from_callable_rate_limit_user(mockbot):
     assert 'channel_rate_message' in kwargs
     assert 'global_rate_message' in kwargs
     assert 'default_rate_message' in kwargs
+    assert kwargs['rate_limit_admins'] is True
     assert kwargs['user_rate_limit'] == 20
     assert kwargs['channel_rate_limit'] == 0
     assert kwargs['global_rate_limit'] == 0
@@ -1303,7 +1321,7 @@ def test_kwargs_from_callable_rate_limit_user(mockbot):
 def test_kwargs_from_callable_rate_limit_channel(mockbot):
     # prepare callable
     @plugin.rule(r'hello', r'hi', r'hey', r'hello|hi')
-    @plugin.rate_channel(20, 'Channel message.')
+    @plugin.rate_channel(20, 'Channel message.', True)
     def handler(wrapped, trigger):
         wrapped.reply('Hi!')
 
@@ -1311,6 +1329,7 @@ def test_kwargs_from_callable_rate_limit_channel(mockbot):
 
     # get kwargs
     kwargs = rules.Rule.kwargs_from_callable(handler)
+    assert 'rate_limit_admins' in kwargs
     assert 'user_rate_limit' in kwargs
     assert 'channel_rate_limit' in kwargs
     assert 'global_rate_limit' in kwargs
@@ -1318,6 +1337,7 @@ def test_kwargs_from_callable_rate_limit_channel(mockbot):
     assert 'channel_rate_message' in kwargs
     assert 'global_rate_message' in kwargs
     assert 'default_rate_message' in kwargs
+    assert kwargs['rate_limit_admins'] is True
     assert kwargs['user_rate_limit'] == 0
     assert kwargs['channel_rate_limit'] == 20
     assert kwargs['global_rate_limit'] == 0
@@ -1330,7 +1350,7 @@ def test_kwargs_from_callable_rate_limit_channel(mockbot):
 def test_kwargs_from_callable_rate_limit_server(mockbot):
     # prepare callable
     @plugin.rule(r'hello', r'hi', r'hey', r'hello|hi')
-    @plugin.rate_global(20, 'Server message.')
+    @plugin.rate_global(20, 'Server message.', True)
     def handler(wrapped, trigger):
         wrapped.reply('Hi!')
 
@@ -1338,6 +1358,7 @@ def test_kwargs_from_callable_rate_limit_server(mockbot):
 
     # get kwargs
     kwargs = rules.Rule.kwargs_from_callable(handler)
+    assert 'rate_limit_admins' in kwargs
     assert 'user_rate_limit' in kwargs
     assert 'channel_rate_limit' in kwargs
     assert 'global_rate_limit' in kwargs
@@ -1345,6 +1366,7 @@ def test_kwargs_from_callable_rate_limit_server(mockbot):
     assert 'channel_rate_message' in kwargs
     assert 'global_rate_message' in kwargs
     assert 'default_rate_message' in kwargs
+    assert kwargs['rate_limit_admins'] is True
     assert kwargs['user_rate_limit'] == 0
     assert kwargs['channel_rate_limit'] == 0
     assert kwargs['global_rate_limit'] == 20

@@ -735,6 +735,13 @@ class AbstractRule(abc.ABC):
         """
 
     @abc.abstractmethod
+    def is_admin_rate_limited(self) -> bool:
+        """Tell if admins should be included in this rule's rate limits.
+
+        :return: ``True`` when admins should be rate limited, else ``False``
+        """
+
+    @abc.abstractmethod
     def get_user_metrics(self, nick: Identifier) -> RuleMetrics:
         """Get the rule's usage metrics for the given user."""
 
@@ -929,6 +936,7 @@ class Rule(AbstractRule):
             'threaded': getattr(handler, 'thread', True),
             'output_prefix': getattr(handler, 'output_prefix', ''),
             'unblockable': getattr(handler, 'unblockable', False),
+            'rate_limit_admins': getattr(handler, 'rate_limit_admins', False),
             'user_rate_limit': getattr(handler, 'user_rate', 0),
             'channel_rate_limit': getattr(handler, 'channel_rate', 0),
             'global_rate_limit': getattr(handler, 'global_rate', 0),
@@ -1027,6 +1035,7 @@ class Rule(AbstractRule):
                  threaded=True,
                  output_prefix=None,
                  unblockable=False,
+                 rate_limit_admins=False,
                  user_rate_limit=0,
                  channel_rate_limit=0,
                  global_rate_limit=0,
@@ -1056,6 +1065,7 @@ class Rule(AbstractRule):
 
         # rate limiting
         self._unblockable = bool(unblockable)
+        self._rate_limit_admins = bool(rate_limit_admins)
         self._user_rate_limit = user_rate_limit
         self._channel_rate_limit = channel_rate_limit
         self._global_rate_limit = global_rate_limit
@@ -1193,6 +1203,9 @@ class Rule(AbstractRule):
 
     def is_unblockable(self):
         return self._unblockable
+
+    def is_admin_rate_limited(self):
+        return self._rate_limit_admins
 
     def get_user_metrics(self, nick: Identifier) -> RuleMetrics:
         return self._metrics_nick.get(nick, RuleMetrics())
