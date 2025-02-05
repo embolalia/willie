@@ -17,7 +17,7 @@ import re
 import requests
 
 from sopel import plugin
-from sopel.builtins.search import duck_search
+
 
 LOGGER = logging.getLogger(__name__)
 PLUGIN_OUTPUT_PREFIX = '[xkcd] '
@@ -26,19 +26,21 @@ PLUGIN_OUTPUT_PREFIX = '[xkcd] '
 # https://twitter.com/Dmdboi/status/1589202274999767041
 SEARCHXKCD_API = 'https://gq67pznq1k.execute-api.eu-west-1.amazonaws.com/search'
 
-ignored_sites = [
-    # For searching the web
-    'almamater.xkcd.com',
-    'blog.xkcd.com',
-    'blag.xkcd.com',
-    'forums.xkcd.com',
-    'fora.xkcd.com',
-    'forums3.xkcd.com',
-    'store.xkcd.com',
-    'wiki.xkcd.com',
-    'what-if.xkcd.com',
-]
-sites_query = ' site:xkcd.com -site:' + ' -site:'.join(ignored_sites)
+
+class SearchXkcdError(Exception):
+    """Generic exception to raise if there was a problem contacting the API."""
+
+
+class SearchFailedError(SearchXkcdError):
+    """Couldn't reach the search endpoint."""
+
+
+class ResponseFormatError(SearchXkcdError):
+    """Response format couldn't be parsed."""
+
+
+class NoResultsError(SearchXkcdError):
+    """Response could be parsed, but it was empty."""
 
 
 def get_info(number=None):
@@ -51,16 +53,6 @@ def get_info(number=None):
     return data
 
 
-def web_search(query):
-    url = duck_search(query + sites_query)
-    if not url:
-        return None
-    match = re.match(r'(?:https?://)?(?:m\.)?xkcd\.com/(\d+)/?', url)
-    if match:
-        return match.group(1)
-    return None
-
-
 def searchxkcd_search(query):
     parameters = {
         'q': query,
@@ -70,19 +62,20 @@ def searchxkcd_search(query):
         response = requests.post(SEARCHXKCD_API, params=parameters)
     except requests.exceptions.ConnectionError as e:
         LOGGER.debug("Unable to reach searchxkcd API: %s", e)
-        return None
+        raise SearchFailedError(str(e))
     except Exception as e:
         LOGGER.debug("Unexpected error calling searchxkcd API: %s", e)
-        return None
+        raise SearchXkcdError(str(e))
 
     try:
         hits = response.json()['results']['hits']
         if not hits:
-            return None
+            raise NoResultsError
         first = hits[0]['objectID']
     except (JSONDecodeError, LookupError):
-        LOGGER.debug("Data format from searchxkcd API could not be understood.")
-        return None
+        msg = "Data format from searchxkcd API could not be understood."
+        LOGGER.debug(msg)
+        raise ResponseFormatError(msg)
 
     return first
 
@@ -98,22 +91,23 @@ def xkcd(bot, trigger):
 
       * If no input is provided it will return a random comic
       * If numeric input is provided it will return that comic, or the
-        nth-latest comic if the number is non-positive
+        nth-latest comic if the number is negative
       * If non-numeric input is provided it will return the first search result
-        for those keywords on the xkcd.com site
+        for those keywords from searchxkcd.com
+
     """
-    # get latest comic for rand function and numeric input
+    # get latest comic, for random selection and validating numeric input
     latest = get_info()
     max_int = latest['num']
 
     # if no input is given (pre - lior's edits code)
-    if not trigger.group(2):  # get rand comic
+    if not trigger.group(2):  # get random comic
         random.seed()
         requested = get_info(random.randint(1, max_int + 1))
     else:
         query = trigger.group(2).strip()
-
         numbered = re.match(r"^(#|\+|-)?(\d+)$", query)
+
         if numbered:
             query = int(numbered.group(2))
             if numbered.group(1) == "-":
@@ -124,13 +118,16 @@ def xkcd(bot, trigger):
             if (query.lower() == "latest" or query.lower() == "newest"):
                 requested = latest
             else:
-                number = searchxkcd_search(query)
-                if number is None:
-                    # generic web-search engine as fallback
-                    number = web_search(query)
-                if not number:
-                    bot.reply('Could not find any comics for that query.')
+                try:
+                    number = searchxkcd_search(query)
+                except NoResultsError:
+                    bot.reply("Sorry, I couldn't find any comics for that query.")
                     return
+                except (ResponseFormatError, SearchFailedError, SearchXkcdError):
+                    bot.reply(
+                        "A technical problem prevented me from searching. "
+                        "Please ask my owner to check my logs.")
+
                 requested = get_info(number)
 
     say_result(bot, requested)

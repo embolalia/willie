@@ -45,7 +45,6 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "xmltodict>=0.12,<0.14",
     "pytz",
     "requests>=2.24.0,<3.0.0",
     "sqlalchemy>=1.4,<1.5",
