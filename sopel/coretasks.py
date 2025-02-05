@@ -159,6 +159,7 @@ CAP_EXTENDED_JOIN = plugin.capability(
 CAP_ACCOUNT_TAG = plugin.capability(
     'account-tag', handler=_handle_account_and_extjoin_capabilities)
 CAP_SASL = plugin.capability('sasl', handler=_handle_sasl_capability)
+CAP_SETNAME = plugin.capability('setname')
 
 
 def setup(bot: Sopel) -> None:
@@ -843,6 +844,28 @@ def track_nicks(bot, trigger):
         bot.users[new] = bot.users.pop(old)
 
     LOGGER.info("User named %r is now known as %r.", str(old), str(new))
+
+
+@plugin.rule('(.*)')
+@plugin.event('SETNAME')
+@plugin.thread(False)
+@plugin.unblockable
+@plugin.priority('medium')
+def handle_setname(bot, trigger):
+    """Update a user's realname when notified by the IRC server."""
+    user = bot.users.get(trigger.nick)
+    if not user:
+        LOGGER.debug(
+            "Discarding SETNAME (%r) received for unknown user %s.",
+            trigger, trigger.nick,
+        )
+        return
+
+    LOGGER.info(
+        "User named %r changed realname to %r.",
+        str(user.realname), str(trigger),
+    )
+    user.realname = trigger
 
 
 @plugin.rule('(.*)')
