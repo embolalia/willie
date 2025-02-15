@@ -478,7 +478,8 @@ def check_callbacks(
     )
     return (
         excluded or
-        any(bot.search_url_callbacks(url)) or
+        # TODO: _url_callbacks is deprecated and will be removed in Sopel 9.0
+        any(pattern.search(url) for pattern in bot._url_callbacks.keys()) or
         bot.rules.check_url_callback(bot, url)
     )
 

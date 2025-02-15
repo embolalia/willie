@@ -718,9 +718,14 @@ class Sopel(irc.AbstractBot):
         :param func: the function to call
         :type func: :term:`function`
         :param sopel: a SopelWrapper instance
-        :type sopel: :class:`SopelWrapper`
-        :param Trigger trigger: the Trigger object for the line from the server
-                                that triggered this call
+        :param trigger: the Trigger object for the line from the server that
+                        triggered this call
+
+        .. deprecated:: 8.1
+
+            This method is deprecated and will be removed in Sopel 9.0. The
+            new rules system uses :meth:`call_rule` instead.
+
         """
         nick = trigger.nick
         current_time = time.time()
@@ -1122,6 +1127,7 @@ class Sopel(irc.AbstractBot):
         # Avoid calling shutdown methods if we already have.
         self.shutdown_methods = []
 
+    # TODO: Remove in Sopel 9.0
     # URL callbacks management
 
     @deprecated(

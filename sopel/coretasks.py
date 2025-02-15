@@ -1612,15 +1612,21 @@ def track_topic(bot, trigger):
 def handle_url_callbacks(bot, trigger):
     """Dispatch callbacks on URLs
 
-    For each URL found in the trigger, trigger the URL callback registered by
-    the ``@url`` decorator.
+    For each URL found in the trigger, trigger the URL callback registered
+    through the now deprecated :meth:`sopel.bot.Sopel.register_url_callback`.
+
+    .. deprecated:: 8.1
+
+        This is deprecated and will be removed in Sopel 9.0.
+
     """
     # find URLs in the trigger
     for url in trigger.urls:
         # find callbacks for said URL
-        for function, match in bot.search_url_callbacks(url):
+        for pattern, function in bot._url_callbacks.items():
+            match = pattern.search(url)
             # trigger callback defined by the `@url` decorator
-            if hasattr(function, 'url_regex'):
+            if match and hasattr(function, 'url_regex'):
                 # bake the `match` argument in before passing the callback on
                 @functools.wraps(function)
                 def decorated(bot, trigger):
